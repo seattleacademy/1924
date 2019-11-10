@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Control the bot through snap</title>
+</head>
+
+<body>
+    <div id="help" style="position:fixed; left:40%; top:4%; color:grey;">
+        Go to Snap
+    </div>
+
+
+    <script src='js/jquery-3.4.1.min.js'></script>
+    <script>
+   
+    var latestData = {};
+
+    function sensorUpdate(data) {
+        //console.log(JSON.stringify(data, null, 4));
+        console.log(data.locationTrueHeading);
+        latestData = data;
+    }
+    //setInterval(animate, 500);
+
+    function drive(left, right) {
+        $.post("/drive", JSON.stringify({
+            left,
+            right
+        }));
+    }
+
+  
+    </script>
+</body>
+
+</html>

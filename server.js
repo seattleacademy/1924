@@ -43,7 +43,7 @@ function signedInt8(num) {
 const SerialPort = require('serialport')
 options = { baudRate: 115200, dataBits: 8, parity: 'none', stopBits: 1, flowControl: 0 };
 
-const port = new SerialPort('/dev/ttyUSB0',options)
+const port = new SerialPort('/dev/ttyUSB0', options)
 //console.log(port)
 port.on('error', function(err) {
     console.error('Error: ', err.message)
@@ -76,6 +76,7 @@ function stop() {
     console.log('stop')
     port.write(Buffer.from([173]));
 }
+
 function reset() {
     console.log('reset')
     port.write(Buffer.from([7]));
@@ -87,16 +88,16 @@ function clean() {
 }
 
 function halt() {
-    console.log('halt',signedInt16(-100))
+    console.log('halt', signedInt16(-100))
 
-    port.write(Buffer.from([146,0,0,0,0]));
+    port.write(Buffer.from([146, 0, 0, 0, 0]));
 }
 
-function drive(left,right){
-	console.log('drive',left,right);
+function drive(left, right) {
+    console.log('drive', left, right);
     //console.log(signedInt16(-100))
     buff = []
-    buff = buff.concat([145],signedInt16(left),signedInt16(right))
+    buff = buff.concat([145], signedInt16(left), signedInt16(right))
     console.log(buff);
     port.write(Buffer.from(buff));
 }
@@ -106,27 +107,33 @@ setTimeout(safe, 1000);
 
 app.all('/drive', function(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
-    if (robotData.mode == "passive") robot.safeMode();
+    //if (robotData.mode == "passive") robot.safeMode();
     console.log(req.body);
-    console.log(JSON.parse(req.body));
-    theBody = JSON.parse(req.body)
-    drive(theBody.left,theBody.right);
-    res.send();
+    let v = req.query || JSON.parse(req.body)
+    drive(v.left, v.right);
+    res.send(sensors);
     // console.log(JSON.stringify(sensors, null, 4));
 
 });
 app.all('/phone', function(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
-    phoneSensors = JSON.parse(req.body);
-    console.log(phoneSensors);
-    res.send();
+    phoneSensors = req.query || JSON.parse(req.body);
+    //console.log(phoneSensors);
+    for (key in phoneSensors) {
+        sensors[key] = phoneSensors[key]; // copies each property to the objCopy object
+    }
+    res.send(JSON.stringify(sensors));
 });
 
-
+app.all('/sensors', function(req, res) {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.send(sensors);
+});
 var sensors = {};
 counter = 0;
 //app.use(express.static(__dirname + '/public'));
 app.use('', express.static('public', { 'index': false }), serveIndex('public', { 'icons': false }))
+app.use('/bot3', express.static('public', { 'index': false }), serveIndex('public', { 'icons': false }))
 
 var server = http.createServer(app);
 const serverPort = 3001;
@@ -142,7 +149,7 @@ var wss = new WebSocketServer({ server: server });
 wss.on('connection', function(ws) {
     var id = setInterval(function() {
         ws.send(JSON.stringify(sensors), function() { /* ignore errors */ });
-    }, 100);
+    }, 1000);
     console.log('connection to client');
     ws.on('close', function() {
         console.log('closing client');

@@ -33,14 +33,14 @@
 
 
     }
+console.log(window.document.location)
 
-
-    var host = window.document.location.host;
-    var ws = new WebSocket('ws://' + host);
-    //var ws = new WebSocket('ws://pi5:5001');
-    ws.onmessage = function(event) {
-        sensorUpdate(JSON.parse(event.data));
-    };
+    // var host = window.document.location.host;
+    // var ws = new WebSocket('ws://' + host);
+    // //var ws = new WebSocket('ws://pi5:5001');
+    // ws.onmessage = function(event) {
+    //     sensorUpdate(JSON.parse(event.data));
+    // };
   
 
     $(".drive").click(function(e) {

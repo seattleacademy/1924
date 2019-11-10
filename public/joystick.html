@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title> Limit Stick-Travel Demo with Stationary Base </title>
+</head>
+
+<body>
+    <div id="help" style="position:fixed; left:40%; top:4%; color:grey;">
+        virtualjoystick.js Limit Stick-Travel Demo with Stationary Base
+    </div>
+            <button class="drive" data-command='{"left":0,"right":0}'>stop</button>
+
+    <button>
+
+    <script src='js/jquery-3.4.1.min.js'></script>
+    <script src="js/virtualjoystick.js"></script>
+    <script>
+    var joystick = new VirtualJoystick({
+        mouseSupport: true,
+        stationaryBase: true,
+        baseX: 200,
+        baseY: 200,
+        limitStickTravel: true,
+        stickRadius: 500
+    });
+
+
+    var latestData = {};
+
+    function sensorUpdate(data) {
+        //console.log(JSON.stringify(data, null, 4));
+        console.log(data.locationTrueHeading);
+        latestData = data;
+    }
+
+    $(".drive").click(function(e) {
+        command = $(this).data('command');
+        $.post("/drive", JSON.stringify({
+            left: command.left,
+            right: command.right
+        }));
+    });
+    var host = window.document.location.host;
+    var ws = new WebSocket('ws://' + host);
+    //var ws = new WebSocket('ws://pi5:5001');
+    ws.onmessage = function(event) {
+        sensorUpdate(JSON.parse(event.data));
+    };
+
+    setInterval(animate, 500);
+
+    function drive(left, right) {
+        $.post("/drive", JSON.stringify({
+            left,
+            right
+        }));
+    }
+
+    function animate() {
+        const speed = 100;
+        let dx = joystick.deltaX()
+        let dy = joystick.deltaY()
+        let dist = Math.sqrt(dx*dx+dy*dy);
+        let angle = Math.atan2(dy,dx)
+
+        right = Math.round(dist*Math.sin(angle));
+        left = Math.round(dist*Math.cos(angle));
+        console.log(Math.round(dist),angle,left,right);
+
+        drive(left,right);
+        
+
+    }
+    </script>
+</body>
+
+</html>

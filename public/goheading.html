@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Follow a particular heading</title>
+</head>
+
+<body>
+    <button class="drive" data-command='{"left":0,"right":0}'>stop</button>
+    <input id="course" />
+    <script src='js/jquery-3.4.1.min.js'></script>
+    <script>
+    var latestData = {};
+
+    var course = "";
+
+    function courseChange(e) {
+        course = $("#course").val();
+        if (course == "") {
+            drive(0, 0);
+        } else {
+            console.log(course, data.locationTrueHeading)
+        }
+    }
+    $("#course").on('change', courseChange);
+
+    function sensorUpdate(data) {
+        //console.log(JSON.stringify(data, null, 4));
+        console.log(data.locationTrueHeading);
+        latestData = data;
+    }
+
+    $(".drive").click(function(e) {
+        command = $(this).data('command');
+        $.post("/drive", JSON.stringify({
+            left: command.left,
+            right: command.right
+        }));
+    });
+    var host = window.document.location.host;
+    var ws = new WebSocket('ws://' + host);
+    //var ws = new WebSocket('ws://pi5:5001');
+    ws.onmessage = function(event) {
+        sensorUpdate(JSON.parse(event.data));
+    };
+
+    // setInterval(animate, 500);
+
+    function drive(left, right) {
+        $.post("/drive", JSON.stringify({
+            left,
+            right
+        }));
+    }
+    </script>
+</body>
+
+</html>
