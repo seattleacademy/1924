@@ -1,4 +1,3 @@
-var WebSocketServer = require('ws').Server;
 var http = require('http');
 var express = require('express');
 var serveIndex = require('serve-index')
@@ -17,44 +16,30 @@ robotData.port = robotData.address.split('.')[3] + '001';
 robotData.mac = networkInterfaces.wlan0[0].mac;
 robotData.odometer = 0;
 phoneSensors = {};
-
-//----------- Helpful Functions -----------
-
-function signedInt16(num) {
-    let high = Math.abs(num) >> 8 & 127,
-        low = num & 255;
-    if (num < 0) {
-        high = 255 - high;
-        if (!low) {
-            high++;
-            if (high > 255) high = 128;
-        }
-    }
-    return [high, low];
-}
-
-function signedInt8(num) {
-    let byte = Math.abs(num) & 127;
-    if (num < 0) byte = 256 - byte;
-    return (byte > 255) ? 128 : byte;
-}
-
+var sensors = {};
+var counter = 0;
 
 const SerialPort = require('serialport')
 options = { baudRate: 115200, dataBits: 8, parity: 'none', stopBits: 1, flowControl: 0 };
 
 const port = new SerialPort('/dev/ttyUSB0', options)
+const ByteLength = require('@serialport/parser-byte-length')
+
 //console.log(port)
 port.on('error', function(err) {
     console.error('Error: ', err.message)
 })
-
+var counter = 0;
 port.once('open', () => {
     console.log('open')
-    port.on('data', function(data) {
-        //console.log('Data:', data)
-        console.log(data.toString('ascii'))
-    })
+    const parser = port.pipe(new ByteLength({ length: 80 }))
+    parser.on('data', (data) => {
+        let buffer = new Uint8Array(data).buffer;
+        let dataView = new DataView(buffer);
+        console.log(dataView.getUint16(17))
+        readAgain = setTimeout(() => port.write(Buffer.from([142, 100])), 1000);
+
+    }) 
 });
 
 function start() {
@@ -86,30 +71,61 @@ function clean() {
     console.log('clean')
     port.write(Buffer.from([135]));
 }
-
+function dock() {
+    console.log('dock')
+    port.write(Buffer.from([143]));
+}
 function halt() {
-    console.log('halt', signedInt16(-100))
-
+    console.log('halt')
     port.write(Buffer.from([146, 0, 0, 0, 0]));
 }
 
-function drive(left, right) {
-    console.log('drive', left, right);
-    //console.log(signedInt16(-100))
-    buff = []
-    buff = buff.concat([145], signedInt16(left), signedInt16(right))
-    console.log(buff);
-    port.write(Buffer.from(buff));
+function getSensors() {
+    console.log('getSensors')
+    port.write(Buffer.from([142, 100]));
+
 }
 
-setTimeout(start, 500);
-setTimeout(safe, 1000);
+function drive(left, right) {
+    const buffer = new ArrayBuffer(5);
+    const view = new DataView(buffer);
+    view.setInt8(0, 145) // drive command
+    view.setInt16(1, left); // 2s complement for left wheel
+    view.setInt16(3, right); // 2s complement for right wheel
+    port.write(Buffer.from(buffer));
+}
+
+function shutdown() {
+    start(); //put in passive mode
+    setTimeout(stop,250); //put in off mode
+    //Assuming that close flushes, check this assumption
+    setTimeout(()=>{port.close(() => { process.exit(0) })},1000)
+    //port.close(() => { process.exit(0) });
+}
+
+setTimeout(start, 0);
+setTimeout(getSensors, 100);
+setTimeout(safe, 300);
+setTimeout(drive, 500, 100, -100);
+setTimeout(drive, 1500, -100, 100);
+//setTimeout(dock, 2500);
+
+setTimeout(shutdown, 5000);
+
+// setTimeout(start, 2500);
+// setTimeout(stop, 3000);
+//setTimeout(sensors, 2500);
 
 app.all('/drive', function(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
     //if (robotData.mode == "passive") robot.safeMode();
-    console.log(req.body);
-    let v = req.query || JSON.parse(req.body)
+    //console.log(req.body);
+
+
+    console.log(req.query, JSON.parse(req.body))
+    let v = req.query;
+    if (Object.keys(v).length == 0) v = JSON.parse(req.body);
+    console.log(v);
     drive(v.left, v.right);
     res.send(sensors);
     // console.log(JSON.stringify(sensors, null, 4));
@@ -129,11 +145,8 @@ app.all('/sensors', function(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.send(sensors);
 });
-var sensors = {};
-counter = 0;
-//app.use(express.static(__dirname + '/public'));
+
 app.use('', express.static('public', { 'index': false }), serveIndex('public', { 'icons': false }))
-app.use('/bot3', express.static('public', { 'index': false }), serveIndex('public', { 'icons': false }))
 
 var server = http.createServer(app);
 const serverPort = 3001;
@@ -143,16 +156,4 @@ console.log('listening on port', serverPort)
 app.all('/all', function(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.send(JSON.stringify(sensors));
-});
-
-var wss = new WebSocketServer({ server: server });
-wss.on('connection', function(ws) {
-    var id = setInterval(function() {
-        ws.send(JSON.stringify(sensors), function() { /* ignore errors */ });
-    }, 1000);
-    console.log('connection to client');
-    ws.on('close', function() {
-        console.log('closing client');
-        clearInterval(id);
-    });
 });

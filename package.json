@@ -1,6 +1,6 @@
 {
   "name": "1924",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Fresh start on saasbot",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,7 @@
     "url": "git+https://github.com/seattleacademy/1924.git"
   },
   "author": "Gary Anderson",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/seattleacademy/1924/issues"
   },
@@ -21,6 +21,5 @@
     "express": "^4.17.1",
     "serialport": "^8.0.5",
     "serve-index": "^1.9.1",
-    "ws": "^7.2.0"
   }
 }
