@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Sing Demo</title>
+</head>
+
+<body>
+    <div>millivolts: <span id="millivolts">...</span></div>
+    <div>
+        <button id='sing'>sing</button>
+        <textarea id="song" rows="10" cols="50">[65,5],[77,10]</textarea>
+    </div>
+    <div> <button id='song1'>song1</button></div>
+    <div>This page demonstrates playing music on the robot.  Pass in an array of notes giving the midi not followed by the duration in 1/32 of seconds. Midi notes less than 32 are played as rests.</div>
+    <div><img src="midiNoteNumbers.gif" alt="midoNoteNumbers.gif"/></div>
+    <script src='js/jquery-3.4.1.min.js'></script>
+    <script>
+    function playSong1(e) {
+        const song1 = '[70,15],[80,5],[80,10],[80,10],[80,10],[80,10],[80,10],[80,10],[80,10],[80,10],[80,10],[80,10],[80,10],[80,10],[80,10],[80,10],[80,10]';
+        fetch('/sing?song=' + song1);
+    }
+    $('#song1').click(playSong1);
+
+    $("#sing").click(function() {
+        song = $("#song").val();
+        $.post("/sing", JSON.stringify({
+            song: song
+        }));
+    });
+
+    var latestData = {};
+
+    function readSensors() {
+        fetch('/sensors')
+            .then((resp) => resp.json())
+            .then(function(data) {
+                latestData = data;
+                // console.log(latestData)
+                $('#millivolts').text(latestData.voltage);
+            })
+    }
+    setInterval(readSensors, 500);
+    </script>
+</body>
+
+</html>

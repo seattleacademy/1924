@@ -17,9 +17,10 @@
   },
   "homepage": "https://github.com/seattleacademy/1924#readme",
   "dependencies": {
+    "@serialport/parser-inter-byte-timeout": "^8.0.4",
     "body-parser": "^1.19.0",
     "express": "^4.17.1",
     "serialport": "^8.0.5",
-    "serve-index": "^1.9.1",
+    "serve-index": "^1.9.1"
   }
 }
