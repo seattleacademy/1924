@@ -23,6 +23,7 @@ const InterByteTimeout = require('@serialport/parser-inter-byte-timeout')
 port.on('error', function(err) {
     console.error('Error: ', err.message)
 })
+
 var counter = 0;
 port.once('open', () => {
     log('open')
@@ -154,12 +155,10 @@ async function drive(left, right) {
     port.write(Buffer.from(buffer));
 }
 
-
 setTimeout(start, 0);
 setTimeout(safe, 300); //Make 300ms to hear beep, 100ms to not
 
 let senseTimeout = setInterval(getSensors, 1000)
-
 
 app.all('/drive', function(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -169,6 +168,7 @@ app.all('/drive', function(req, res) {
     res.send();
 
 });
+
 app.all('/phone', function(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
     phoneSensors = req.query || JSON.parse(req.body);
@@ -186,13 +186,13 @@ function clearSingTimeouts() {
     singTimeouts = [];
 }
 
-function singWhen(song,t){
-    let timeout = setTimeout(()=>{
-            console.log(song,t)
+function singWhen(song, t) {
+    let timeout = setTimeout(() => {
+        console.log(song, t)
 
-     port.write(Buffer.from(song)); //store song
-     port.write(Buffer.from([141, 0])); //play
-    },t) //play song 
+        port.write(Buffer.from(song)); //store song
+        port.write(Buffer.from([141, 0])); //play
+    }, t) //play song 
     singTimeouts.push(timeout);
 }
 app.all('/sing', function(req, res) {
@@ -202,7 +202,7 @@ app.all('/sing', function(req, res) {
     notes = notes.replace(/\s/g, ''); //remove white space
     if (notes[1] != '[') notes = '[' + notes + ']'; //add outer brackets if user left out
 
-    clearSingTimeouts()
+    //clearSingTimeouts() //Shoud we stop other songs in the list?
     var arr = JSON.parse(notes);
     len = arr.length;
     let timeToPlay = 0;
@@ -215,18 +215,41 @@ app.all('/sing', function(req, res) {
             payload.push(Math.round(arr[i][1]));
             duration += arr[i][1] * (.016) * 1000;
         }
-        singWhen(payload,timeToPlay);
+        singWhen(payload, timeToPlay);
         timeToPlay += duration;
-        arr.splice(0,len);
-        console.log('length after splice',arr.length,duration);
-        //arr = [];
+        arr.splice(0, len); //reduce song length by queued notes
     }
-
-
-
     res.send();
 });
+var moveTimeouts = [];
 
+function danceWhen(move, t) {
+    let timeout = setTimeout(() => {
+        console.log('danceWhen', move, t)
+        drive(move[0],move[1]);
+    }, t)
+    moveTimeouts.push(timeout);
+}
+app.all('/dance', function(req, res) {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    let dance = req.query.dance || JSON.parse(req.body).dance;
+    log(dance)
+    dance = dance.replace(/\s/g, ''); //remove white space
+    if (dance[1] != '[') dance = '[' + dance + ']'; //add outer brackets if user left out
+
+    //clearTimeouts() //Shoud we stop other dances in the list?
+    var arr = JSON.parse(dance);
+    let timeToDance = 0;
+    var payload = [];
+    for (let i = 0; i < arr.length; i++) {
+        payload = [];
+        payload.push(Math.round(arr[i][0]));
+        payload.push(Math.round(arr[i][1]));
+        danceWhen(payload, timeToDance);
+        timeToDance += arr[i][2];
+    }
+    res.send();
+});
 
 app.all('/sensors', function(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -243,6 +266,12 @@ console.log('listening on port', serverPort)
 
 app.all('/all', function(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
+    res.send(JSON.stringify(sensors));
+});
+
+app.all('/reset', function(req, res) {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    reset();
     res.send(JSON.stringify(sensors));
 });
 
